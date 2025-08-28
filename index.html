@@ -1,438 +1,422 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Fundamental Movement Skills – Auto Checklist</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- TFJS + Pose Detection (MoveNet) -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.16.0/dist/tf-backend-webgl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@3.6.1/dist/pose-detection.min.js"></script>
-  <style>
-    :root { --bg:#0b0c10; --card:#14161a; --ink:#e8eef1; --muted:#9fb3c8; --accent:#56ccf2; --bad:#ff6b6b; --good:#35d07f; --warn:#ffb020; }
-    *{box-sizing:border-box} body{margin:0;font:15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;background:linear-gradient(160deg,#0b0c10,#11161b 45%,#0b0c10);color:var(--ink)}
-    header{padding:18px 18px 10px} header h1{margin:0;font-size:20px} header p{margin:6px 0 0;color:var(--muted)}
-    .wrap{max-width:960px;margin:0 auto;padding:12px}
-    .card{background:var(--card);border:1px solid #1d2228;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-    label{display:block;margin:10px 0 6px;color:var(--muted)}
-    select,input[type=file]{width:100%;padding:10px;background:#0f1216;border:1px solid #222832;border-radius:10px;color:var(--ink)}
-    .row{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
-    button{appearance:none;border:0;background:var(--accent);color:#072436;font-weight:700;padding:12px 16px;border-radius:12px;cursor:pointer}
-    button[disabled]{opacity:.6;cursor:default}
-    progress{width:100%;height:8px}
-    table{width:100%;border-collapse:collapse;margin-top:12px;border:1px solid #202833}
-    th,td{padding:10px;border-top:1px solid #202833;vertical-align:top}
-    th{background:#0e1217;color:#cfe6ff;text-align:left}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:700}
-    .yes{background:rgba(53,208,127,.15);color:var(--good);border:1px solid rgba(53,208,127,.45)}
-    .no{background:rgba(255,107,107,.15);color:var(--bad);border:1px solid rgba(255,107,107,.45)}
-    .unclear{background:rgba(255,176,32,.15);color:var(--warn);border:1px solid rgba(255,176,32,.45)}
-    .fineprint{color:var(--muted);font-size:12px}
-    footer{padding:18px;color:var(--muted);text-align:center}
-    @media (max-width:720px){.row{grid-template-columns:1fr}}
-  </style>
+<meta charset="utf-8" />
+<title>FMS – Auto Checklist (No Overlays)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<!-- TFJS + Pose Detection -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.16.0/dist/tf-backend-webgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@3.6.1/dist/pose-detection.min.js"></script>
+<style>
+:root{--bg:#0b0c10;--card:#14161a;--ink:#e8eef1;--muted:#9fb3c8;--accent:#56ccf2;--bad:#ff6b6b;--good:#35d07f;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b0c10,#11161b 45%,#0b0c10);color:var(--ink)}
+header{padding:18px 18px 10px}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 0;color:var(--muted)}
+.wrap{max-width:960px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid #1d2228;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+label{display:block;margin:10px 0 6px;color:var(--muted)}
+select,input[type=file]{width:100%;padding:10px;background:#0f1216;border:1px solid #222832;border-radius:10px;color:var(--ink)}
+.row{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+button{appearance:none;border:0;background:var(--accent);color:#072436;font-weight:700;padding:12px 16px;border-radius:12px;cursor:pointer}
+button[disabled]{opacity:.6;cursor:default}
+.progress-wrap{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px}
+progress{width:100%;height:10px}
+.percent{min-width:54px;text-align:right;color:#cfe6ff;font-weight:700}
+table{width:100%;border-collapse:collapse;margin-top:12px;border:1px solid #202833}
+th,td{padding:10px;border-top:1px solid #202833;vertical-align:top}
+th{background:#0e1217;color:#cfe6ff;text-align:left}
+.status{font-size:20px}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.fineprint{color:var(--muted);font-size:12px}
+footer{padding:18px;color:var(--muted);text-align:center}
+@media (max-width:720px){.row{grid-template-columns:1fr}}
+.err{display:none;background:#331a1a;border:1px solid #5c2323;color:#ffd6d6;padding:10px;border-radius:10px;margin:10px 0}
+.show{display:block}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #2a3340;background:#0f141b;margin-left:6px}
+.ready{color:#7ce0a4;border-color:#2c503a}
+.notready{color:#ffcc88;border-color:#5a3f17}
+</style>
 </head>
 <body>
-  <header class="wrap">
-    <h1>Fundamental Movement Skills – Auto Checklist</h1>
-    <p>Upload a video. The app checks each critical feature and returns a Yes/No report (no overlays shown).</p>
-  </header>
+<header class="wrap">
+  <h1>Fundamental Movement Skills – Auto Checklist</h1>
+  <p>Upload a video. The app checks each critical feature and returns a Yes/No report (no overlays shown).</p>
+</header>
 
-  <main class="wrap">
-    <section class="card">
-      <div class="row">
-        <div>
-          <label for="skill">Skill</label>
-          <select id="skill">
-            <option value="underhand-throw" selected>Underhand Throw (PE checklist)</option>
-          </select>
-        </div>
-        <div>
-          <label for="dominant">Dominant Hand</label>
-          <select id="dominant">
-            <option>right</option>
-            <option>left</option>
-          </select>
-        </div>
+<main class="wrap">
+  <section class="card">
+    <div id="err" class="err"></div>
+
+    <div class="row">
+      <div>
+        <label for="skill">Skill</label>
+        <select id="skill">
+          <option value="underhand-throw" selected>Underhand Throw (PE checklist)</option>
+        </select>
       </div>
-
-      <div class="row">
-        <div>
-          <label for="direction">Throw Direction (on screen)</label>
-          <select id="direction">
-            <option value="right" selected>toward right ➡️</option>
-            <option value="left">toward left ⬅️</option>
-          </select>
-        </div>
-        <div>
-          <label for="sampleRate">Sampling FPS (analysis)</label>
-          <select id="sampleRate">
-            <option value="12">12 fps (balanced)</option>
-            <option value="8">8 fps (fast)</option>
-            <option value="16">16 fps (detailed)</option>
-          </select>
-        </div>
+      <div>
+        <label for="dominant">Dominant Hand</label>
+        <select id="dominant"><option>right</option><option>left</option></select>
       </div>
+    </div>
 
-      <label for="file">Video file (side view recommended, 720p+)</label>
-      <input id="file" type="file" accept="video/*" />
-
-      <div style="display:flex;gap:12px;align-items:center;margin-top:12px">
-        <button id="analyze" disabled>Analyze</button>
-        <progress id="prog" value="0" max="1" style="flex:1;display:none"></progress>
-        <span id="status" class="fineprint"></span>
+    <div class="row">
+      <div>
+        <label for="direction">Throw Direction (on screen)</label>
+        <select id="direction">
+          <option value="right" selected>toward right ➡️</option>
+          <option value="left">toward left ⬅️</option>
+        </select>
       </div>
+      <div>
+        <label for="sampleRate">Sampling FPS (analysis)</label>
+        <select id="sampleRate">
+          <option value="12">12 fps (balanced)</option>
+          <option value="8">8 fps (fast)</option>
+          <option value="16">16 fps (detailed)</option>
+        </select>
+      </div>
+    </div>
 
-      <!-- Hidden video (no overlay output shown to user) -->
-      <video id="vid" style="display:none" controls></video>
-    </section>
+    <label for="file">Video file (side view recommended, 720p+)</label>
+    <input id="file" type="file" accept="video/*" />
 
-    <section id="results" class="card" style="display:none">
-      <h3 style="margin:0 0 8px">Results</h3>
-      <div id="summary" class="fineprint"></div>
-      <table id="table">
-        <thead>
-          <tr><th style="width:36%">Performance Criterion</th><th>Status</th><th>Evidence (timestamps)</th><th>Notes</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p class="fineprint" style="margin-top:10px">
-        This tool uses heuristic rules on 2D pose data (MoveNet). If tracking confidence is low or the camera angle is sub-optimal,
-        items may be marked <b>Unclear</b> rather than penalized.
-      </p>
-    </section>
-  </main>
+    <div class="progress-wrap">
+      <button id="analyze" disabled>Analyze</button>
+      <progress id="prog" value="0" max="1"></progress>
+      <div id="percent" class="percent">0%</div>
+    </div>
+    <div id="status" class="fineprint" style="margin-top:6px">
+      <span id="modelBadge" class="badge notready">Model: loading…</span>
+      <span id="videoBadge" class="badge notready">Video: not loaded</span>
+    </div>
 
-  <footer>
-    Built for quick FMS assessments.
-  </footer>
+    <!-- Hidden video element used for analysis only -->
+    <video id="vid" style="display:none" preload="auto" muted playsinline></video>
+  </section>
+
+  <section id="results" class="card">
+    <h3 style="margin:0 0 8px">Performance Criteria</h3>
+    <div id="summary" class="fineprint" style="margin-bottom:8px"></div>
+    <table id="table">
+      <thead>
+      <tr><th style="width:40%">Performance Criterion</th><th style="width:12%">Met?</th><th style="width:22%">Evidence (timestamps)</th><th>Notes</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p class="fineprint" style="margin-top:10px">
+      Uses simple rules on 2D pose data (MoveNet). If tracking confidence is low or angle is poor, items may be ⚠️ (unclear).
+    </p>
+  </section>
+</main>
+
+<footer>Built for quick PE assessments. No skeleton or angle overlays are displayed.</footer>
 
 <script>
-/* ----------------------- Utilities ----------------------- */
-const byId = (id)=>document.getElementById(id);
-const vid = byId('vid'), file = byId('file'), btn = byId('analyze');
-const prog = byId('prog'), statusEl = byId('status');
-const tableBody = byId('table').querySelector('tbody');
-const results = byId('results'), summary = byId('summary');
+/* ---------- DOM helpers ---------- */
+const $ = id=>document.getElementById(id);
+const vid=$('vid'), file=$('file'), btn=$('analyze'), err=$('err');
+const prog=$('prog'), percent=$('percent'), statusEl=$('status');
+const modelBadge=$('modelBadge'), videoBadge=$('videoBadge');
+const tableBody=$('table').querySelector('tbody'), summary=$('summary');
 
-let detector=null, modelReady=false, videoLoaded=false;
+let detector=null, modelReady=false, videoReady=false;
 
-file.addEventListener('change', () => {
-  if (file.files && file.files[0]) {
-    vid.src = URL.createObjectURL(file.files[0]);
-    vid.onloadedmetadata = () => {
-      videoLoaded = true;
-      btn.disabled = !modelReady;
-      status(`Video loaded: ${formatTime(vid.duration)} duration, ${Math.round(vid.videoWidth)}×${Math.round(vid.videoHeight)}.`);
-    };
-  }
-});
-
-function status(msg){ statusEl.textContent = msg || ''; }
-function formatTime(s){ const m=Math.floor(s/60), ss=Math.floor(s%60); return `${m}:${String(ss).padStart(2,'0')}`; }
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
-function angle(a,b,c){ // angle at b, degrees
-  const v1={x:a.x-b.x, y:a.y-b.y}, v2={x:c.x-b.x, y:c.y-b.y};
-  const dot=v1.x*v2.x+v1.y*v2.y, n1=Math.hypot(v1.x,v1.y), n2=Math.hypot(v2.x,v2.y);
-  if(n1===0||n2===0) return NaN;
-  const cos = Math.min(1, Math.max(-1, dot/(n1*n2)));
-  return (Math.acos(cos)*180/Math.PI);
+/* ---------- Status UI ---------- */
+function setBadge(el, ok, text){
+  el.textContent = text;
+  el.classList.toggle('ready', ok);
+  el.classList.toggle('notready', !ok);
 }
-function avg(...vals){ return vals.reduce((a,b)=>a+b,0)/vals.length; }
-function median(arr){ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
-function smooth1d(arr,win=3){ if(arr.length<3) return arr; const out=[]; for(let i=0;i<arr.length;i++){ const a=Math.max(0,i-win), b=Math.min(arr.length-1,i+win); let sum=0,n=0; for(let j=a;j<=b;j++){ sum+=arr[j]; n++; } out.push(sum/n); } return out; }
+function setProgress(r){ prog.value=r; percent.textContent=`${Math.round(Math.max(0,Math.min(1,r))*100)}%`; }
+function showErr(msg){ err.textContent=msg; err.classList.add('show'); }
+function clearErr(){ err.textContent=''; err.classList.remove('show'); }
 
-const KP = {
-  nose:0, left_eye:1, right_eye:2, left_ear:3, right_ear:4,
-  left_shoulder:5, right_shoulder:6, left_elbow:7, right_elbow:8,
-  left_wrist:9, right_wrist:10, left_hip:11, right_hip:12,
-  left_knee:13, right_knee:14, left_ankle:15, right_ankle:16
-};
-function getPt(kps, name){ const k=kps[KP[name]]; return k && k.score>0.5 ? {x:k.x, y:k.y, s:k.score} : null; }
+/* ---------- Formatting ---------- */
+const KP={nose:0,left_eye:1,right_eye:2,left_ear:3,right_ear:4,left_shoulder:5,right_shoulder:6,left_elbow:7,right_elbow:8,left_wrist:9,right_wrist:10,left_hip:11,right_hip:12,left_knee:13,right_knee:14,left_ankle:15,right_ankle:16};
+function getPt(kps,name){const k=kps[KP[name]];return k&&k.score>0.5?{x:k.x,y:k.y,s:k.score}:null;}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function angle(a,b,c){const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};const dot=v1.x*v2.x+v1.y*v2.y;const n1=Math.hypot(v1.x,v1.y),n2=Math.hypot(v2.x,v2.y);if(!n1||!n2)return NaN;const cos=Math.min(1,Math.max(-1,dot/(n1*n2)));return Math.acos(cos)*180/Math.PI;}
+function avg(...xs){return xs.reduce((a,b)=>a+b,0)/xs.length;}
+function smooth1d(arr,win=2){if(arr.length<3)return arr;const out=[];for(let i=0;i<arr.length;i++){const a=Math.max(0,i-win),b=Math.min(arr.length-1,i+win);let s=0,n=0;for(let j=a;j<=b;j++){s+=arr[j];n++;}out.push(s/n);}return out;}
+function formatTime(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return `${m}:${String(ss).padStart(2,'0')}`;}
 
-/* ----------------------- Model Load ---------------------- */
-(async function init(){
-  status('Loading model…');
-  await tf.setBackend('webgl');
-  await tf.ready();
-  detector = await poseDetection.createDetector(
-    poseDetection.SupportedModels.MoveNet,
-    { modelType: poseDetection.movenet.modelType.THUNDER }
-  );
-  modelReady = true;
-  status('Model ready. Load a video to begin.');
-  btn.disabled = !videoLoaded;
-})();
-
-/* --------------------- Skill Configs --------------------- */
-const SKILLS = {
-  "underhand-throw": {
-    label: "Underhand Throw",
-    items: [
-      { id:"face_target", label:"Face target", detector:"faceTarget" },
-      { id:"feet_width", label:"Place feet shoulder width apart", detector:"feetShoulderWidth" },
-      { id:"knees_bent", label:"Keep knees slightly bent", detector:"kneesSlight" },
-      { id:"hold_front", label:"Hold ball with dominant hand in front of body", detector:"holdFront" },
-      { id:"backswing_waist", label:"Swing dominant hand back at least to waist level", detector:"backswingToWaist" },
-      { id:"step_non_dom", label:"Step with non-dominant foot toward target", detector:"stepWithNonDominant" },
-      { id:"release_window", label:"Release between knee and waist level", detector:"releaseBetweenKneeAndWaist" },
-      { id:"follow_through", label:"After release, dominant hand continues toward target and above waist", detector:"followThrough" }
+/* ---------- Skill setup ---------- */
+const SKILLS={
+  "underhand-throw":{
+    label:"Underhand Throw",
+    items:[
+      {id:"face_target",label:"Face target"},
+      {id:"feet_width",label:"Place feet shoulder width apart"},
+      {id:"knees_bent",label:"Keep knees slightly bent"},
+      {id:"hold_front",label:"Hold ball with dominant hand in front of body"},
+      {id:"backswing_waist",label:"Swing dominant hand back at least to waist level"},
+      {id:"step_non_dom",label:"Step with non-dominant foot toward target"},
+      {id:"release_window",label:"Release between knee and waist level"},
+      {id:"follow_through",label:"After release, dominant hand continues toward target and above the waist"}
     ]
   }
 };
 
-/* --------------- Main: Run Analysis on Video ------------- */
-btn.addEventListener('click', async ()=>{
-  btn.disabled = true; prog.style.display='block'; prog.value=0; status('Analyzing… (this may take a minute)');
-  tableBody.innerHTML=''; results.style.display='none';
+function renderCriteriaTable(skillKey){
+  const items=SKILLS[skillKey].items;
+  tableBody.innerHTML='';
+  for(const it of items){
+    const tr=document.createElement('tr');
+    tr.dataset.id=it.id;
+    tr.innerHTML=`<td>${it.label}</td>
+      <td class="status"><span class="warn" aria-label="pending">•</span></td>
+      <td class="times">—</td><td class="notes"></td>`;
+    tableBody.appendChild(tr);
+  }
+  summary.textContent=`Skill: ${SKILLS[skillKey].label}. Upload a video and click Analyze.`;
+}
+renderCriteriaTable('underhand-throw');
 
-  const cfg = {
-    skill: byId('skill').value,
-    dominant: byId('dominant').value,             // 'right' | 'left'
-    direction: byId('direction').value,           // 'right' | 'left'
-    sampleFps: Number(byId('sampleRate').value)   // frames per second to analyze
-  };
-  const report = await analyzeVideo(cfg);
-  renderReport(report, cfg);
-  btn.disabled = false; prog.style.display='none'; status('Done.');
+/* ---------- Load model (with backend fallback) ---------- */
+(async ()=>{
+  try{
+    await tf.setBackend('webgl');
+    await tf.ready();
+  }catch(e){
+    showErr('WebGL backend failed, falling back to CPU. Performance may be slow.');
+    await tf.setBackend('cpu'); await tf.ready();
+  }
+  try{
+    detector=await poseDetection.createDetector(
+      poseDetection.SupportedModels.MoveNet,
+      {modelType: poseDetection.movenet.modelType.THUNDER}
+    );
+    modelReady=true;
+    setBadge(modelBadge,true,'Model: ready');
+    maybeEnableAnalyze();
+  }catch(e){
+    showErr('Failed to load pose model. Check your internet connection.');
+  }
+})();
+
+/* ---------- Video load/priming ---------- */
+file.addEventListener('change',()=>{
+  clearErr();
+  if(file.files && file.files[0]){
+    const url=URL.createObjectURL(file.files[0]);
+    vid.src=url;
+    vid.load();
+    vid.onloadedmetadata=async()=>{
+      try{
+        // iOS/Safari sometimes needs a tiny play->pause to allow seeking
+        await vid.play().catch(()=>{});
+        vid.pause();
+        await waitForReadyState(vid, 2); // HAVE_CURRENT_DATA
+        videoReady=true;
+        setBadge(videoBadge,true,`Video: ${formatTime(vid.duration)} (${Math.round(vid.videoWidth)}×${Math.round(vid.videoHeight)})`);
+        maybeEnableAnalyze();
+      }catch(e){
+        showErr('Video could not be initialized for analysis.');
+      }
+    };
+  }
+});
+function waitForReadyState(video, target){
+  return new Promise(res=>{
+    if(video.readyState>=target) return res();
+    const onCan=()=>{ video.removeEventListener('canplay', onCan); res(); };
+    video.addEventListener('canplay', onCan, {once:true});
+  });
+}
+function maybeEnableAnalyze(){
+  btn.disabled=!(modelReady && videoReady);
+}
+
+/* ---------- Analyze click ---------- */
+btn.addEventListener('click', async ()=>{
+  btn.disabled=true; clearErr(); setProgress(0);
+  try{
+    renderCriteriaTable($('skill').value); // reset table
+    const report = await analyzeVideo({
+      skill:$('skill').value,
+      dominant:$('dominant').value,
+      direction:$('direction').value,
+      sampleFps:Number($('sampleRate').value)
+    });
+    renderReport(report);
+  }catch(e){
+    console.error(e);
+    showErr('Analysis failed. Try a different video (side view, full body).');
+  }finally{
+    btn.disabled=false;
+  }
 });
 
-/* ------------------ Video Sampling + Pose ---------------- */
+/* ---------- Core analysis ---------- */
 async function analyzeVideo(cfg){
-  const dirSign = cfg.direction==='right' ? +1 : -1;
-  const dom = cfg.dominant; const non = dom==='right' ? 'left' : 'right';
+  const dirSign = cfg.direction==='right'?+1:-1;
+  const dom=cfg.dominant, non=dom==='right'?'left':'right';
+  const duration=Math.max(vid.duration||0, 0.01);
+  const step=1/Math.max(4,Math.min(30,cfg.sampleFps));
+  const frames=[], evidence={};
 
-  const duration = vid.duration;
-  const step = 1/Math.max(4, Math.min(30, cfg.sampleFps)); // seconds
-  const frames = [];
-  const evidence = {}; // id -> { times:[], notes:[] }
-
-  // Seek loop
-  for(let t=0, i=0; t<=duration; t+=step, i++){
-    await seekTo(t);
+  for(let t=0;t<=duration;t+=step){
+    await seekTo(t); // robust seek
     const poses = await detector.estimatePoses(vid,{flipHorizontal:false});
-    const p = poses && poses[0]; // single person expected
-    prog.value = t/duration;
-    if(!p || !p.keypoints) continue;
+    setProgress(Math.min(1, t/duration));
+    const p=poses && poses[0];
+    if(!p||!p.keypoints) continue;
 
-    const kps = p.keypoints;
-    // extract useful points (ignore if low score)
-    const L = (name)=>getPt(kps, 'left_'+name);
-    const R = (name)=>getPt(kps, 'right_'+name);
+    const kps=p.keypoints;
+    const L=n=>getPt(kps,'left_'+n), R=n=>getPt(kps,'right_'+n);
+    const pts={ls:L('shoulder'),rs:R('shoulder'),lh:L('hip'),rh:R('hip'),
+      le:L('elbow'),re:R('elbow'),lw:L('wrist'),rw:R('wrist'),
+      lk:L('knee'),rk:R('knee'),la:L('ankle'),ra:R('ankle'),nose:getPt(kps,'nose')};
+    if(Object.values(pts).filter(Boolean).length<10) continue;
 
-    const pts = {
-      ls:L('shoulder'), rs:R('shoulder'), lh:L('hip'), rh:R('hip'),
-      le:L('elbow'), re:R('elbow'), lw:L('wrist'), rw:R('wrist'),
-      lk:L('knee'), rk:R('knee'), la:L('ankle'), ra:R('ankle'),
-      nose:getPt(kps,'nose'), leye:getPt(kps,'left_eye'), reye:getPt(kps,'right_eye')
-    };
-    const ok = Object.values(pts).filter(Boolean).length >= 10;
-    if(!ok) continue;
+    const shoulderWidth=(pts.ls&&pts.rs)?dist(pts.ls,pts.rs):NaN;
+    const hipMid=(pts.lh&&pts.rh)?{x:avg(pts.lh.x,pts.rh.x),y:avg(pts.lh.y,pts.rh.y)}:null;
+    const kneeMid=(pts.lk&&pts.rk)?{x:avg(pts.lk.x,pts.rk.x),y:avg(pts.lk.y,pts.rk.y)}:null;
+    const bodyScale=shoulderWidth||100;
 
-    const shoulderWidth = (pts.ls && pts.rs) ? dist(pts.ls, pts.rs) : NaN;
-    const hipMid = (pts.lh && pts.rh) ? {x:avg(pts.lh.x, pts.rh.x), y:avg(pts.lh.y, pts.rh.y)} : null;
-    const kneeMid = (pts.lk && pts.rk) ? {x:avg(pts.lk.x, pts.rk.x), y:avg(pts.lk.y, pts.rk.y)} : null;
-    const bodyScale = shoulderWidth || 100;
-
-    const domW = dom==='right' ? pts.rw : pts.lw;
-    const domS = dom==='right' ? pts.rs : pts.ls;
-    const nonA = non==='right' ? pts.ra : pts.la;
+    const domW=dom==='right'?pts.rw:pts.lw;
+    const domS=dom==='right'?pts.rs:pts.ls;
+    const nonA=non==='right'?pts.ra:pts.la;
 
     frames.push({
-      t, 
-      pts, shoulderWidth, hipMid, kneeMid, bodyScale,
+      t, pts, shoulderWidth, hipMid, kneeMid, bodyScale,
       domW, domS, nonA,
-      // handy numbers:
-      kneeAngleL: (pts.lh&&pts.lk&&pts.la)? angle(pts.lh, pts.lk, pts.la) : NaN,
-      kneeAngleR: (pts.rh&&pts.rk&&pts.ra)? angle(pts.rh, pts.rk, pts.ra) : NaN,
-      wristX: domW? domW.x : NaN, wristY: domW? domW.y : NaN,
-      shoulderX: domS? domS.x : NaN, hipY: hipMid? hipMid.y : NaN, kneeY: kneeMid? kneeMid.y : NaN,
-      ankleNonX: nonA? nonA.x : NaN,
-      ankleL: pts.la, ankleR: pts.ra
+      kneeAngleL:(pts.lh&&pts.lk&&pts.la)?angle(pts.lh,pts.lk,pts.la):NaN,
+      kneeAngleR:(pts.rh&&pts.rk&&pts.ra)?angle(pts.rh,pts.rk,pts.ra):NaN,
+      wristX:domW?domW.x:NaN, wristY:domW?domW.y:NaN,
+      shoulderX:domS?domS.x:NaN, hipY:hipMid?hipMid.y:NaN, kneeY:kneeMid?kneeMid.y:NaN,
+      ankleNonX:nonA?nonA.x:NaN,
+      ankleL:pts.la, ankleR:pts.ra
     });
   }
 
-  // Velocity (dominant wrist)
-  const xs = frames.map(f=>f.wristX), ys = frames.map(f=>f.wristY);
-  const dt = step;
-  const vx = xs.map((v,i)=> i===0?0:(v-xs[i-1])/dt);
-  const vy = ys.map((v,i)=> i===0?0:(v-ys[i-1])/dt);
-  const speed = vx.map((v,i)=> Math.hypot(v, vy[i]));
-  const speedSm = smooth1d(speed,2);
+  // Velocity for release proxy
+  const xs=frames.map(f=>f.wristX), ys=frames.map(f=>f.wristY), dt=step;
+  const vx=xs.map((v,i)=>i? (v-xs[i-1])/dt : 0), vy=ys.map((v,i)=>i? (v-ys[i-1])/dt : 0);
+  const speed=vx.map((v,i)=>Math.hypot(v,vy[i])), speedSm=smooth1d(speed,2);
+  const peakIdx=speedSm.indexOf(Math.max(...speedSm));
+  const releaseIdx=Math.max(1,peakIdx);
+  const startIdx=Math.max(0,Math.floor(frames.length*0.05));
+  const endIdx=Math.max(releaseIdx+1,Math.floor(frames.length*0.9));
 
-  // Split phases (very light heuristic)
-  const peakIdx = speedSm.indexOf(Math.max(...speedSm));
-  const releaseIdx = Math.max(1, peakIdx); // candidate at max forward speed
-  const startIdx = Math.max(0, Math.floor(frames.length*0.05));
-  const endIdx = Math.max(releaseIdx+1, Math.floor(frames.length*0.9));
+  function ev(id,time,note){(evidence[id]??={times:[],notes:[]}); if(time!=null)evidence[id].times.push(time); if(note)evidence[id].notes.push(note);}
 
-  // Helpers to record evidence
-  function ev(id, time, note){ (evidence[id]??={times:[],notes:[]}); if(time!=null) evidence[id].times.push(time); if(note) evidence[id].notes.push(note); }
+  const res={};
 
-  /* --------- Detectors for each checklist item ---------- */
-  const res = {}; // id -> 'yes'|'no'|'unclear'
-
-  // 1) Face target (approx: torso/shoulder orientation & step direction match target)
-  {
-    const id='face_target';
-    const sample = frames.slice(startIdx, startIdx+Math.max(3,Math.floor(frames.length*0.1)));
-    const good = sample.filter(f=>{
-      if(!f.pts.ls||!f.pts.rs) return false;
-      const horiz = (f.pts.rs.x - f.pts.ls.x) * (cfg.direction==='right'?+1:-1);
-      return horiz > 0; // right shoulder more right when throwing right, etc.
-    }).length >= Math.ceil(sample.length*0.6);
-    res[id] = sample.length? (good?'yes':'no') : 'unclear';
-    if(sample.length) ev(id, frames[startIdx]?.t, 'Shoulders aligned toward target');
+  // 1) Face target
+  { const id='face_target';
+    const sample=frames.slice(startIdx,startIdx+Math.max(3,Math.floor(frames.length*0.1)));
+    const good=sample.filter(f=>f.pts.ls&&f.pts.rs && ((f.pts.rs.x-f.pts.ls.x)*(cfg.direction==='right'?+1:-1))>0).length>=Math.ceil(sample.length*0.6);
+    res[id]=sample.length?(good?'yes':'no'):'unclear';
+    if(sample.length) ev(id,frames[startIdx]?.t,'Shoulders aligned toward target');
   }
 
-  // 2) Feet shoulder width apart (initial stance)
-  {
-    const id='feet_width';
-    const sample = frames.slice(startIdx, startIdx+Math.max(3,Math.floor(frames.length*0.15)));
-    let okCount=0, n=0;
-    for(const f of sample){
-      if(!f.ankleL||!f.ankleR||!f.shoulderWidth) continue;
-      const feet = dist(f.ankleL, f.ankleR);
-      const ratio = feet / f.shoulderWidth;
-      if(ratio>=0.8 && ratio<=1.4) okCount++;
-      n++;
+  // 2) Feet shoulder width
+  { const id='feet_width';
+    const sample=frames.slice(startIdx,startIdx+Math.max(3,Math.floor(frames.length*0.15)));
+    let ok=0,n=0; for(const f of sample){ if(f.ankleL&&f.ankleR&&f.shoulderWidth){ const ratio=dist(f.ankleL,f.ankleR)/f.shoulderWidth; if(ratio>=0.8&&ratio<=1.4)ok++; n++; } }
+    res[id]=n?(ok>=Math.ceil(n*0.6)?'yes':'no'):'unclear';
+    if(n) ev(id,sample[0].t,'Feet:shoulders 0.8–1.4');
+  }
+
+  // 3) Knees slightly bent
+  { const id='knees_bent';
+    const sample=frames.slice(startIdx,startIdx+Math.max(3,Math.floor(frames.length*0.15)));
+    let ok=0,n=0; for(const f of sample){ if(isFinite(f.kneeAngleL)||isFinite(f.kneeAngleR)){ const gL=f.kneeAngleL>=150&&f.kneeAngleL<=175, gR=f.kneeAngleR>=150&&f.kneeAngleR<=175; if(gL||gR) ok++; n++; } }
+    res[id]=n?(ok>=Math.ceil(n*0.5)?'yes':'no'):'unclear';
+    if(n) ev(id,sample[0].t,'Knee 150°–175°');
+  }
+
+  // 4) Hand in front
+  { const id='hold_front';
+    const sample=frames.slice(startIdx,startIdx+Math.max(3,Math.floor(frames.length*0.2)));
+    let ok=0,n=0; for(const f of sample){
+      if(!(f.domW&&f.hipY&&f.pts.ls&&f.pts.rs)) continue;
+      const midX=avg(f.pts.ls.x,f.pts.rs.x);
+      const inFront = cfg.direction==='right'? (f.domW.x>=midX-0.15*f.bodyScale):(f.domW.x<=midX+0.15*f.bodyScale);
+      const between = f.domW.y>=avg(f.pts.ls.y,f.pts.rs.y) && f.domW.y<=f.hipY+0.15*f.bodyScale;
+      if(inFront&&between) ok++; n++;
     }
-    res[id] = n? (okCount>=Math.ceil(n*0.6)?'yes':'no') : 'unclear';
-    if(n) ev(id, sample[0].t, 'Feet:shoulders ratio within 0.8–1.4');
+    res[id]=n?(ok>=Math.ceil(n*0.5)?'yes':'no'):'unclear';
+    if(n) ev(id,sample[0].t,'Hand in front (chest→waist)');
   }
 
-  // 3) Knees slightly bent (initial stance)
-  {
-    const id='knees_bent';
-    const sample = frames.slice(startIdx, startIdx+Math.max(3,Math.floor(frames.length*0.15)));
-    let ok=0,n=0;
-    for(const f of sample){
-      if(!isFinite(f.kneeAngleL) || !isFinite(f.kneeAngleR)) continue;
-      const goodL = f.kneeAngleL>=150 && f.kneeAngleL<=175;
-      const goodR = f.kneeAngleR>=150 && f.kneeAngleR<=175;
-      if(goodL || goodR) ok++;
-      n++;
-    }
-    res[id] = n? (ok>=Math.ceil(n*0.5)?'yes':'no') : 'unclear';
-    if(n) ev(id, sample[0].t, 'Knee angle within 150°–175° on at least one leg');
+  // 5) Backswing to waist
+  { const id='backswing_waist';
+    let bestIdx=startIdx, best=frames[startIdx]?.domW?.x ?? NaN;
+    for(let i=startIdx;i<=releaseIdx;i++){ const f=frames[i]; if(!f||!isFinite(f.wristX)) continue; const score=f.wristX*(cfg.direction==='right'?-1:+1); if(!isFinite(best)||score>best){best=score; bestIdx=i;} }
+    const f=frames[bestIdx]; const ok=f&&f.hipY&&f.domW&&f.domW.y>=f.hipY;
+    res[id]=f?(ok?'yes':'no'):'unclear'; if(f) ev(id,f.t,'Backswing reached ≥ waist');
   }
 
-  // 4) Hold dominant hand in front of body (ready)
-  {
-    const id='hold_front';
-    const sample = frames.slice(startIdx, startIdx+Math.max(3,Math.floor(frames.length*0.2)));
-    let ok=0,n=0;
-    for(const f of sample){
-      if(!(f.domW && f.hipY && f.pts.ls && f.pts.rs)) continue;
-      const midTorsoX = avg(f.pts.ls.x, f.pts.rs.x);
-      const inFront = (cfg.direction==='right'? (f.domW.x>=midTorsoX-0.15*f.bodyScale) : (f.domW.x<=midTorsoX+0.15*f.bodyScale));
-      const betweenChestNavel = f.domW.y >= (avg(f.pts.ls.y, f.pts.rs.y)) && f.domW.y <= f.hipY + 0.15*f.bodyScale;
-      if(inFront && betweenChestNavel) ok++;
-      n++;
-    }
-    res[id] = n? (ok>=Math.ceil(n*0.5)?'yes':'no') : 'unclear';
-    if(n) ev(id, sample[0].t, 'Dominant hand in front window (chest→waist)');
+  // 6) Step with non-dominant foot
+  { const id='step_non_dom';
+    const s=frames[startIdx], r=frames[releaseIdx], e=frames[endIdx]||frames.at(-1);
+    const moved=x=> (x!=null && s?.ankleNonX!=null)? ( (x - s.ankleNonX)* (cfg.direction==='right'?+1:-1) ):NaN;
+    const delta=Math.max(moved(r?.ankleNonX), moved(e?.ankleNonX));
+    const ok=isFinite(delta) && delta>0.1*(s?.bodyScale||100);
+    res[id]=isFinite(delta)?(ok?'yes':'no'):'unclear';
+    if(isFinite(delta)) ev(id,r?.t,'Non-dominant foot advanced');
   }
 
-  // 5) Backswing to at least waist level
-  {
-    const id='backswing_waist';
-    let bestIdx = startIdx, best = frames[startIdx]?.domW?.x ?? NaN;
-    for(let i=startIdx;i<=releaseIdx;i++){
-      const f=frames[i]; if(!f||!isFinite(f.wristX)) continue;
-      // farthest back opposite the throw direction
-      const score = f.wristX * (cfg.direction==='right'?-1:+1);
-      if(!isFinite(best) || score>best){ best=score; bestIdx=i; }
-    }
-    const f=frames[bestIdx];
-    const ok = f && f.hipY && f.domW && f.domW.y >= f.hipY;
-    res[id] = f? (ok?'yes':'no') : 'unclear';
-    if(f) ev(id, f.t, `Backswing reached wrist_y=${Math.round(f.domW.y)} vs hip_y=${Math.round(f.hipY)}`);
-  }
-
-  // 6) Step with non-dominant foot toward target
-  {
-    const id='step_non_dom';
-    const start = frames[startIdx], rel = frames[releaseIdx], end = frames[endIdx] || frames.at(-1);
-    const sX = start?.ankleNonX, rX = rel?.ankleNonX, eX = end?.ankleNonX;
-    const moved = (x)=> (x!=null && sX!=null)? ( (x - sX) * dirSign ) : NaN;
-    const delta = Math.max(moved(rX), moved(eX));
-    const ok = isFinite(delta) && delta > 0.1*(start?.bodyScale || 100);
-    res[id] = isFinite(delta)? (ok?'yes':'no') : 'unclear';
-    if(isFinite(delta)) ev(id, rel?.t, `Non-dominant foot advanced ${delta.toFixed(1)}px toward target`);
-  }
-
-  // 7) Release between knee & waist (use wrist peak speed proxy)
-  {
-    const id='release_window';
+  // 7) Release between knee & waist
+  { const id='release_window';
     const f=frames[releaseIdx];
-    const ok = !!(f && isFinite(f.wristY) && isFinite(f.kneeY) && isFinite(f.hipY) && f.wristY>=f.kneeY && f.wristY<=f.hipY);
-    res[id] = f? (ok?'yes':'no') : 'unclear';
-    if(f) ev(id, f.t, `Release proxy at ${formatTime(f.t)} with wrist_y between knee (${Math.round(f.kneeY)}) and waist (${Math.round(f.hipY)})`);
+    const ok=!!(f&&isFinite(f.wristY)&&isFinite(f.kneeY)&&isFinite(f.hipY)&&f.wristY>=f.kneeY&&f.wristY<=f.hipY);
+    res[id]=f?(ok?'yes':'no'):'unclear';
+    if(f) ev(id,f.t,'Release proxy within window');
   }
 
-  // 8) Follow-through above waist & toward target (post-release)
-  {
-    const id='follow_through';
-    const window = frames.slice(releaseIdx+1, Math.min(frames.length, releaseIdx+1+Math.round(0.3/dt)));
-    let ok=false; let when=null;
-    for(const f of window){
-      if(!(f && f.domW && f.hipY && f.domS)) continue;
-      const aboveWaist = f.domW.y <= f.hipY;
-      const forwardOfTorso = (f.domW.x - f.domS.x) * dirSign > 0.15*(f.bodyScale||100);
-      if(aboveWaist && forwardOfTorso){ ok=true; when=f.t; break; }
+  // 8) Follow-through forward & above waist
+  { const id='follow_through';
+    const dt=step, window=frames.slice(releaseIdx+1, Math.min(frames.length, releaseIdx+1+Math.round(0.3/dt)));
+    let ok=false, when=null;
+    for(const f of window){ if(!(f&&f.domW&&f.hipY&&f.domS)) continue;
+      const above=f.domW.y<=f.hipY; const forward=(f.domW.x-f.domS.x)*(cfg.direction==='right'?+1:-1) > 0.15*(f.bodyScale||100);
+      if(above&&forward){ok=true; when=f.t; break;}
     }
-    res[id] = window.length? (ok?'yes':'no') : 'unclear';
-    if(window.length) ev(id, when??window.at(-1).t, ok?'Hand finished forward & above waist':'No forward/above-waist follow-through detected');
+    res[id]=window.length?(ok?'yes':'no'):'unclear';
+    if(window.length) ev(id, when??window.at(-1).t, ok?'Forward & above waist':'No clear finish');
   }
 
-  /* -------------------- Build report --------------------- */
-  const items = SKILLS[cfg.skill].items.map(it=>{
-    const evd = evidence[it.id]||{times:[],notes:[]};
-    return {
-      id: it.id, label: it.label, status: res[it.id]||'unclear',
-      times: evd.times.map(formatTime), notes: evd.notes
-    };
+  const items=SKILLS[cfg.skill].items.map(it=>{
+    const evd=evidence[it.id]||{times:[],notes:[]};
+    return {id:it.id,label:it.label,status:res[it.id]||'unclear',times:evd.times.map(formatTime),notes:evd.notes};
   });
-
-  const score = items.filter(i=>i.status==='yes').length;
-  return { items, score, total: items.length, releaseTime: frames[releaseIdx]?.t ?? null };
+  const score=items.filter(i=>i.status==='yes').length;
+  return {items,score,total:items.length};
 }
 
-/* ------------------- Rendering Results ------------------- */
-function renderReport(report, cfg){
-  results.style.display='block';
-  summary.innerHTML = `
-    <b>Skill:</b> ${SKILLS[cfg.skill].label} |
-    <b>Dominant:</b> ${cfg.dominant} |
-    <b>Direction:</b> ${cfg.direction} |
-    <b>Score:</b> ${report.score}/${report.total}
-    ${report.releaseTime!=null? ` | <b>Release:</b> ${formatTime(report.releaseTime)}`:''}
-  `;
-
-  tableBody.innerHTML='';
+/* ---------- Render report ---------- */
+function renderReport(report){
+  summary.innerHTML=`<b>Score:</b> ${report.score}/${report.total}`;
   for(const row of report.items){
-    const tr = document.createElement('tr');
-    const pill = (st)=>`<span class="pill ${st}">${st==='yes'?'Present':'not present'}</span>`;
-    const statusCell = row.status==='yes'?pill('yes'):row.status==='no'?pill('no'):pill('unclear');
-    const times = row.times.length? row.times.join(', ') : '—';
-    const notes = row.notes.length? row.notes.join('; ') : '';
-    tr.innerHTML = `
-      <td>${row.label}</td>
-      <td>${statusCell}</td>
-      <td>${times}</td>
-      <td>${notes}</td>
-    `;
-    tableBody.appendChild(tr);
+    const tr=tableBody.querySelector(`tr[data-id="${row.id}"]`); if(!tr) continue;
+    const s=tr.querySelector('.status'), t=tr.querySelector('.times'), n=tr.querySelector('.notes');
+    let icon='⚠️', cls='warn', label='unclear';
+    if(row.status==='yes'){icon='✅'; cls='good'; label='met';}
+    else if(row.status==='no'){icon='❌'; cls='bad'; label='not met';}
+    s.innerHTML=`<span class="${cls}" aria-label="${label}">${icon}</span>`;
+    t.textContent=row.times.length?row.times.join(', '):'—';
+    n.textContent=row.notes.join('; ');
   }
 }
 
-/* ------------------ Video seeking helper ----------------- */
+/* ---------- Robust seek helper ---------- */
 function seekTo(t){
-  return new Promise(resolve=>{
-    const handler=()=>{ vid.removeEventListener('seeked', handler); resolve(); };
-    vid.addEventListener('seeked', handler, {once:true});
-    vid.currentTime = Math.min(Math.max(0, t), (vid.duration||t));
+  return new Promise(async (resolve)=>{
+    // ensure playable state (iOS)
+    if(vid.readyState<2){
+      try{ await vid.play(); vid.pause(); }catch(_){}
+    }
+    const on=()=>{ vid.removeEventListener('seeked', on); resolve(); };
+    vid.addEventListener('seeked', on, {once:true});
+    try{ vid.currentTime=Math.min(Math.max(0,t), vid.duration||t); }
+    catch(e){ resolve(); }
   });
 }
 </script>
