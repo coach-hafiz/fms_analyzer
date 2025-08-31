@@ -1,17 +1,19 @@
 import React, {useEffect, useRef, useState} from 'react';
 import { loadDetector, samplePosesFromVideo, FramePose } from '../lib/pose';
-import { SKILLS } from '../lib/criteria';
+import { SKILLS, Criterion } from '../lib/criteria';
 
-type Props = { file: File, skillKey: keyof typeof SKILLS };
+type Result = {id:string,label:string,pass?:boolean,evidence?:number[]};
+type Props = {
+  file: File,
+  skillKey: keyof typeof SKILLS,
+  onComplete: (results: Result[]) => void
+};
 
-export default function VideoAnalyzer({file, skillKey}:Props){
+export default function VideoAnalyzer({file, skillKey, onComplete}:Props){
   const videoRef = useRef<HTMLVideoElement>(null);
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [frames, setFrames] = useState<FramePose[]>([]);
-  const [results, setResults] = useState<{id:string,label:string,pass?:boolean,evidence?:number[]}[]>(
-    SKILLS[skillKey].criteria.map(c=>({id:c.id,label:c.label}))
-  );
 
   useEffect(()=>{
     const url = URL.createObjectURL(file);
@@ -29,7 +31,6 @@ export default function VideoAnalyzer({file, skillKey}:Props){
     const fps = 8;
     const duration = v.duration;
     const total = Math.floor(duration*fps);
-    const poses: FramePose[] = [];
     v.pause();
 
     for(let i=0;i<=total;i++){
@@ -45,17 +46,9 @@ export default function VideoAnalyzer({file, skillKey}:Props){
     // Evaluate
     const skill = SKILLS[skillKey];
     const evaluated = skill.criteria.map(c=>c.evaluate(frames));
-    setResults(skill.criteria.map((c,i)=>({id:c.id,label:c.label,pass:evaluated[i].pass,evidence:evaluated[i].evidence})));
+    const results = skill.criteria.map((c,i)=>({id:c.id,label:c.label,pass:evaluated[i].pass,evidence:evaluated[i].evidence}));
+    onComplete(results);
     setProgress(100);
-  };
-
-  const exportCSV = ()=>{
-    const rows = [['Criterion','Pass']];
-    results.forEach(r=>rows.push([r.label, r.pass?'YES':'NO']));
-    const csv = rows.map(r=>r.map(s=>`"${s}"`).join(',')).join('\n');
-    const blob = new Blob([csv],{type:'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'analysis.csv'; a.click();
   };
 
   return (
@@ -64,18 +57,12 @@ export default function VideoAnalyzer({file, skillKey}:Props){
         <div className="hstack"><span className="badge">{SKILLS[skillKey].title}</span></div>
         <div className="hstack" style={{gap:8}}>
           <button onClick={run} disabled={!ready}>Analyze</button>
-          <button onClick={exportCSV} disabled={results.every(r=>r.pass===undefined)}>Export CSV</button>
         </div>
       </div>
 
       <video ref={videoRef} controls style={{width:'100%',borderRadius:12}}/>
 
       <div className="progress"><div style={{width:`${progress}%`}}/></div>
-
-      <div>
-        <h3>Checklist</h3>
-      </div>
-      {/* Render checklist */}
     </div>
   );
 }
