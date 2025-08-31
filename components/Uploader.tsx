@@ -1,14 +1,10 @@
 import React from 'react';
 
-export default function Uploader({onVideo}:{onVideo:(file:File)=>void}){
+export default function Uploader({onVideo}:{onVideo:(f:File)=>void}){
   return (
-    <div className="card vstack">
-      <div className="hstack">
-        <input id="file" type="file" accept="video/*" onChange={e=>{
-          const f=e.target.files?.[0]; if (f) onVideo(f);
-        }}/>
-      </div>
-      <div className="muted">Upload a short clip (10–20s works best).</div>
+    <div className="vstack" style={{gap:8}}>
+      <label>Video:</label>
+      <input type="file" accept="video/*" onChange={e=>onVideo(e.target.files![0])}/>
     </div>
   );
 }
