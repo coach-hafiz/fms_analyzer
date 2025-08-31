@@ -6,11 +6,21 @@ import VideoAnalyzer from '../components/VideoAnalyzer';
 import { SKILLS } from '../lib/criteria';
 
 type SkillKey = keyof typeof SKILLS;
+type Result = {id:string,label:string,pass?:boolean,evidence?:number[]};
 
 export default function Home(){
   const [file, setFile] = useState<File|null>(null);
   const [skill, setSkill] = useState<SkillKey>('bounce_stationary');
-  const [items, setItems] = useState(SKILLS[skill].criteria.map(c=>({id:c.id,label:c.label})));
+  const [items, setItems] = useState<Result[]>(SKILLS[skill].criteria.map(c=>({id:c.id,label:c.label})));
+
+  const exportCSV = ()=>{
+    const rows = [['Criterion','Pass']];
+    items.forEach(r=>rows.push([r.label, r.pass?'YES':'NO']));
+    const csv = rows.map(r=>r.map(s=>`"${s}"`).join(',')).join('\n');
+    const blob = new Blob([csv],{type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'analysis.csv'; a.click();
+  };
 
   return (
     <main className="main">
@@ -33,8 +43,11 @@ export default function Home(){
 
       {file && (
         <>
-          <VideoAnalyzer file={file} skillKey={skill}/>
+          <VideoAnalyzer file={file} skillKey={skill} onComplete={setItems}/>
           <Checklist items={items}/>
+          <div className="card hstack" style={{justifyContent:'flex-end'}}>
+            <button onClick={exportCSV} disabled={items.every(r=>r.pass===undefined)}>Export CSV</button>
+          </div>
         </>
       )}
 
