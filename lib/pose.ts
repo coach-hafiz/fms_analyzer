@@ -1,45 +1,29 @@
-import * as tf from '@tensorflow/tfjs-core';
-import '@tensorflow/tfjs-backend-webgl';
-import * as posedetection from '@tensorflow-models/pose-detection';
+import * as poseDetection from '@tensorflow-models/pose-detection';
 
-let detector: posedetection.PoseDetector | null = null;
+export type FramePose = poseDetection.Pose;
 
-export async function loadDetector() {
-  await tf.setBackend('webgl');
-  await tf.ready();
-  detector = await posedetection.createDetector(
-    posedetection.SupportedModels.MoveNet,
-    {
-      modelType: posedetection.movenet.modelType.SINGLEPOSE_THUNDER,
-      enableSmoothing: true,
-      modelUrl: '/models/movenet/model.json'   // self-hosted
-    }
-  );
-  return detector;
+let detector: poseDetection.PoseDetector | null = null;
+
+export async function loadDetector(){
+  if(detector) return;
+  const model = poseDetection.SupportedModels.MoveNet;
+  detector = await poseDetection.createDetector(model, {
+    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+    modelUrl: '/models/movenet/model.json'
+  });
 }
 
-export type FramePose = {
-  t: number;           // seconds into video
-  keypoints: posedetection.Keypoint[];
-  score: number;
-};
+export async function samplePosesFromVideo(video:HTMLVideoElement, fps:number){
+  const duration = video.duration;
+  const totalFrames = Math.floor(duration * fps);
+  const poses:poseDetection.Pose[] = [];
 
-export async function samplePosesFromVideo(video: HTMLVideoElement, fps=8): Promise<FramePose[]> {
-  if (!detector) throw new Error('Detector not loaded');
-  const frames: FramePose[] = [];
-  const total = Math.floor(video.duration * fps);
-  const originalPlayback = video.playbackRate;
-  video.pause();
-  for (let i=0;i<=total;i++){
+  for(let i=0; i<totalFrames; i++){
     const t = i/fps;
-    video.currentTime = Math.min(t, Math.max(0, video.duration-0.05));
-    // wait for seek
+    video.currentTime = Math.min(t, Math.max(0, duration-0.05));
     await new Promise(r => { const onSeek=()=>{ video.removeEventListener('seeked', onSeek); r(null); }; video.addEventListener('seeked', onSeek); });
-    const poses = await detector.estimatePoses(video, {flipHorizontal:false});
-    if (poses[0]) {
-      frames.push({ t, keypoints: poses[0].keypoints, score: poses[0].score ?? 0 });
-    }
+    const result = await detector!.estimatePoses(video, {maxPoses:1, flipHorizontal:false});
+    if(result.length > 0) poses.push(result[0]);
   }
-  video.playbackRate = originalPlayback;
-  return frames;
+  return poses;
 }
