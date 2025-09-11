@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badminton HitMap</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --bg:#f8fafc; --card:#ffffff; --line:#e2e8f0;
+    --ok:#16a34a; --bad:#ef4444; --accent:#2563eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:20px}
+  main{max-width:1100px;margin:22px auto;padding:0 16px 40px}
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+  @media (max-width: 960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px rgba(2,6,23,.04)}
+  .card h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:16px}
+  .card .pad{padding:14px 16px}
+  label{font-weight:600;font-size:13px;display:block;margin-bottom:6px}
+  input,select,button{width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+  input:focus,select:focus,button:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .court-wrap{position:relative;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:#e6f0ea}
+  .court{display:block;width:100%;height:auto;user-select:none;pointer-events:none}
+  .dropzone{position:absolute;left:0;top:0;right:0;bottom:0}
+  .dropzone.dragover{outline:2px dashed var(--accent);outline-offset:-10px}
+  .marker{position:absolute;width:28px;height:28px;transform:translate(-50%,-50%);pointer-events:none;filter: drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+  /* colour the black PNG to green/red via CSS filters */
+  .in   {filter: hue-rotate(85deg) saturate(700%) brightness(1.1) drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+  .out  {filter: hue-rotate(-20deg) saturate(800%) brightness(1.1) drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+  .tray{display:flex;gap:12px;align-items:center}
+  .draggable{width:42px;height:42px;cursor:grab;border:1px dashed var(--line);border-radius:10px;display:grid;place-items:center;background:#fff}
+  .draggable img{width:30px;height:30px;pointer-events:none}
+  .muted{color:var(--muted);font-size:13px}
+  .btns{display:flex;gap:10px}
+  .btn{background:var(--accent);color:#fff;border:none}
+  .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .chip{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+  .chip b{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+  .chip .big{font-size:20px;font-weight:800}
+  .legend{display:flex;gap:14px;align-items:center}
+  .legend span{display:inline-flex;gap:8px;align-items:center}
+  .dot{width:14px;height:14px;border-radius:50%}
+  .ok{background:var(--ok)}
+  .bad{background:var(--bad)}
+  .footnote{font-size:12px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<header><h1>Badminton HitMap</h1></header>
+
+<main class="grid">
+  <!-- LEFT: Court & Controls -->
+  <section class="card">
+    <h2>Record Landings</h2>
+    <div class="pad">
+      <div class="row">
+        <div>
+          <label for="obsDate">Observation date</label>
+          <input id="obsDate" type="date">
+        </div>
+        <div>
+          <label for="format">Playing area</label>
+          <select id="format">
+            <option value="singles" selected>Singles (narrow)</option>
+            <option value="doubles">Doubles (wide)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label for="player">Player name</label>
+          <input id="player" type="text" placeholder="e.g., Afiq">
+        </div>
+        <div>
+          <label for="observer">Observer name</label>
+          <input id="observer" type="text" placeholder="e.g., Coach Chan">
+        </div>
+      </div>
+
+      <div style="margin-top:16px" class="legend">
+        <span><span class="dot ok"></span> In (green)</span>
+        <span><span class="dot bad"></span> Out (red)</span>
+        <span class="muted">Drag the shuttle onto the court</span>
+      </div>
+
+      <div style="margin-top:10px" class="court-wrap" id="courtWrap">
+        <img src="court-half.jpg" alt="Half badminton court" id="court" class="court" draggable="false">
+        <div class="dropzone" id="dropzone" aria-label="Court dropzone"></div>
+      </div>
+
+      <div style="margin-top:12px" class="tray">
+        <div class="draggable" draggable="true" id="shuttleTemplate" title="Drag me">
+          <img src="shuttle.png" alt="Shuttle" />
+        </div>
+        <div class="muted">A new shuttle is always available here.</div>
+      </div>
+
+      <div class="btns" style="margin-top:14px">
+        <button class="btn" id="reportBtn">Generate Report</button>
+        <button class="btn secondary" id="undoBtn" title="Remove last point">Undo last</button>
+        <button class="btn secondary" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="footnote">Tip: You can also tap/click on the court to drop a shuttle quickly.</div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Report -->
+  <section class="card" id="reportCard">
+    <h2>Feedback</h2>
+    <div class="pad">
+      <div id="summary" class="muted">Add landings and press <b>Generate Report</b>.</div>
+
+      <div id="stats" style="display:none">
+        <div style="margin:10px 0 6px"><b>Distribution</b></div>
+        <div class="stats">
+          <div class="chip">
+            <b>Front / Middle / Back</b>
+            <div class="big" id="fmbPct">–</div>
+          </div>
+          <div class="chip">
+            <b>Left / Centre / Right</b>
+            <div class="big" id="lcrPct">–</div>
+          </div>
+          <div class="chip">
+            <b>In / Out</b>
+            <div class="big" id="inoutPct">–</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px"><b>Coach Notes</b></div>
+        <ul id="coachNotes" style="margin:6px 0 0 18px">
+          <!-- generated tips -->
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const dropzone = document.getElementById('dropzone');
+  const courtWrap = document.getElementById('courtWrap');
+  const courtImg  = document.getElementById('court');
+  const tray      = document.getElementById('shuttleTemplate');
+  const fmtSel    = document.getElementById('format');
+
+  const points = []; // {x,y, in:bool, zoneY:'front|mid|back', zoneX:'left|centre|right'}
+
+  // helper: court rect each time (responsive)
+  function getCourtRect(){
+    return courtWrap.getBoundingClientRect();
+  }
+
+  // Singles vs doubles lateral boundaries (proportional).
+  // Real courts: singles width = 5.18m, doubles = 6.10m -> margin ≈ 7.5% each side.
+  function getLateralBounds(){
+    const rect = getCourtRect();
+    if (fmtSel.value === 'singles'){
+      const margin = rect.width * 0.075;
+      return {left: rect.left + margin, right: rect.right - margin};
+    } else {
+      return {left: rect.left, right: rect.right};
+    }
+  }
+
+  // Determine in/out and zones given a clientX/Y
+  function classify(clientX, clientY){
+    const rect = getCourtRect();
+    const bounds = getLateralBounds();
+
+    // clamp to court top/bottom
+    const inY = clientY >= rect.top && clientY <= rect.bottom;
+    const inX = clientX >= bounds.left && clientX <= bounds.right;
+    const isIn = inX && inY;
+
+    // relative 0..1 coordinates within the visible court box
+    const rx = (clientX - rect.left) / rect.width;
+    const ry = (clientY - rect.top)  / rect.height;
+
+    // thirds
+    const zoneY = (ry < 1/3) ? 'front' : (ry < 2/3 ? 'middle' : 'back');
+    const zoneX = (rx < 1/3) ? 'left'  : (rx < 2/3 ? 'centre' : 'right');
+
+    // return also pixel coords for placement (inside container positioning)
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+
+    return {isIn, zoneY, zoneX, px, py};
+  }
+
+  // Place a marker image at px/py
+  function placeMarker(px, py, isIn){
+    const m = document.createElement('img');
+    m.src = 'shuttle.png';
+    m.className = 'marker ' + (isIn ? 'in':'out');
+    m.style.left = px + 'px';
+    m.style.top  = py + 'px';
+    dropzone.appendChild(m);
+    return m;
+  }
+
+  // Make tray draggable
+  tray.addEventListener('dragstart', (e)=>{
+    e.dataTransfer.setData('text/plain', 'shuttle');
+    // a tiny transparent drag image so cursor doesn't hide shuttle template
+    const g = document.createElement('canvas'); g.width=g.height=1;
+    e.dataTransfer.setDragImage(g,0,0);
+  });
+
+  // visual affordance
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, ()=> dropzone.classList.remove('dragover'));
+  });
+
+  // Drop handler
+  dropzone.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    const kind = e.dataTransfer.getData('text/plain');
+    if (kind !== 'shuttle') return;
+
+    const info = classify(e.clientX, e.clientY);
+    placeMarker(info.px, info.py, info.isIn);
+    points.push({x:info.px, y:info.py, in:info.isIn, zoneY:info.zoneY, zoneX:info.zoneX});
+  });
+
+  // Quick tap/click placement (no drag)
+  dropzone.addEventListener('click', (e)=>{
+    const info = classify(e.clientX, e.clientY);
+    placeMarker(info.px, info.py, info.isIn);
+    points.push({x:info.px, y:info.py, in:info.isIn, zoneY:info.zoneY, zoneX:info.zoneX});
+  });
+
+  // Undo and Reset
+  document.getElementById('undoBtn').addEventListener('click', ()=>{
+    if (!points.length) return;
+    points.pop();
+    const last = dropzone.querySelector('.marker:last-of-type');
+    if (last) last.remove();
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    points.length = 0;
+    dropzone.querySelectorAll('.marker').forEach(n=>n.remove());
+    document.getElementById('summary').innerHTML = 'Add landings and press <b>Generate Report</b>.';
+    document.getElementById('stats').style.display = 'none';
+  });
+
+  // Report generation
+  document.getElementById('reportBtn').addEventListener('click', ()=>{
+    const sum = document.getElementById('summary');
+    const statsBox = document.getElementById('stats');
+
+    if (points.length === 0){
+      sum.textContent = 'No landings yet. Add some points first.';
+      statsBox.style.display = 'none';
+      return;
+    }
+
+    const total = points.length;
+    const count = (f)=>points.filter(f).length;
+
+    // Y zones
+    const f = count(p=>p.zoneY==='front');
+    const m = count(p=>p.zoneY==='middle');
+    const b = count(p=>p.zoneY==='back');
+
+    // X zones
+    const l = count(p=>p.zoneX==='left');
+    const c = count(p=>p.zoneX==='centre');
+    const r = count(p=>p.zoneX==='right');
+
+    // in/out
+    const inN  = count(p=>p.in);
+    const outN = total - inN;
+
+    // helpers
+    const pct = (n)=> (n*100/total).toFixed(1) + '%';
+    const str = (a,b,c)=> `${pct(a)} / ${pct(b)} / ${pct(c)}`;
+
+    document.getElementById('fmbPct').textContent   = str(f,m,b);
+    document.getElementById('lcrPct').textContent   = str(l,c,r);
+    document.getElementById('inoutPct').textContent = `${pct(inN)} / ${pct(outN)}`;
+
+    // header summary
+    const date = document.getElementById('obsDate').value || '(no date)';
+    const player = document.getElementById('player').value || '(no name)';
+    const observer = document.getElementById('observer').value || '(no name)';
+    const fmt = fmtSel.value;
+
+    sum.innerHTML = `<b>${player}</b> — ${fmt} | Observed by <b>${observer}</b> on <b>${date}</b><br>
+                     ${total} landings analysed.`;
+    statsBox.style.display = '';
+
+    // coach notes
+    const ul = document.getElementById('coachNotes');
+    ul.innerHTML = '';
+    const notes = [];
+    // simple heuristics
+    if (inN/total < 0.75) notes.push('Focus on consistency: practice high-percentage clears and lifts to reduce unforced errors.');
+    if (f/total > 0.45)   notes.push('Many landings in the forecourt. Mix in deeper clears/drives to push opponents back.');
+    if (b/total > 0.45)   notes.push('Heavy back-court bias. Add drop shots and net tumbles to vary depth.');
+    if (l/total > 0.45)   notes.push('Left-side bias detected. Include cross-court patterns to balance placement.');
+    if (r/total > 0.45)   notes.push('Right-side bias detected. Train straight-line precision to the opposite channel.');
+    if (c/total > 0.5)    notes.push('Many centre landings. Aim wider to pressure the opponent’s movement.');
+    if (!notes.length)    notes.push('Distribution looks balanced. Progress by increasing pace and corner accuracy.');
+
+    notes.forEach(t=>{
+      const li = document.createElement('li');
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+  });
+
+  // Recompute “in/out” visuals on resize or when format changes (singles/doubles)
+  function refreshColours(){
+    const rect = getCourtRect();
+    const pts = Array.from(dropzone.querySelectorAll('.marker'));
+    pts.forEach((el, idx)=>{
+      const p = points[idx];
+      // Convert stored px/py back to clientX/Y for a new classification
+      const clientX = rect.left + p.x;
+      const clientY = rect.top  + p.y;
+      const info = classify(clientX, clientY);
+      p.in = info.isIn;
+      p.zoneX = info.zoneX;
+      p.zoneY = info.zoneY;
+      el.classList.toggle('in',  info.isIn);
+      el.classList.toggle('out', !info.isIn);
+    });
+  }
+  window.addEventListener('resize', refreshColours);
+  fmtSel.addEventListener('change', refreshColours);
+
+  // Quality of life: set default date to today
+  document.getElementById('obsDate').valueAsDate = new Date();
+})();
+</script>
+</body>
+</html>
